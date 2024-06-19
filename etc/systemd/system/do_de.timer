@@ -1,0 +1,9 @@
+[Unit]
+Description=Run do_de hourly
+
+[Timer]
+OnCalendar=hourly
+Unit=do_de.service
+
+[Install]
+WantedBy=timers.target

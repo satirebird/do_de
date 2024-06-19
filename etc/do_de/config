@@ -1,0 +1,14 @@
+# /etc/default/do_de
+NETMASK=128
+DEVICE="eth0"
+HOSTNAME=""
+USERNAME=""
+PASSWORD=""
+LOGDIR=/var/log/do_de
+LOGFILE=$LOGDIR/$HOSTNAME.log
+TMPDIR=/tmp/do_de
+IPV4ECHO="icanhazip.com"
+ADDR6FILE=$TMPDIR/.do_de.addr6
+ADDR4FILE=$TMPDIR/.do_de.addr4
+# Change to one to enable do_de
+ENABLED=1

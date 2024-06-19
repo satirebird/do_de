@@ -1,0 +1,7 @@
+# /etc/logrotate.d/do_de
+/var/log/do_de/*log { 
+        compress
+        size 100k
+        rotate 5
+        missingok
+}

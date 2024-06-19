@@ -1,0 +1,100 @@
+#!/bin/sh
+
+# test various files
+test -f /etc/default/do_de && . /etc/default/do_de
+test -f /etc/do_de/config && . /etc/do_de/config
+
+# check if service is enabled, if not exit
+if [ "$ENABLED" = "0" ] ; then
+    exit 0
+fi
+
+# set timestamp
+TIMESTAMP=$(date +"%H:%M:%S - %d.%m.%Y")
+
+# test if log-folder exist, if not create it
+if ! [ -d $LOGDIR ] ; then
+        mkdir -p $LOGDIR
+fi
+
+# test if tmp-folder exist, if not create it
+if ! [ -d $TMPDIR ] ; then
+        mkdir -p $TMPDIR
+fi
+
+# test if hostname or token is set, if not exit with failure
+if [ -z "$HOSTNAME" -o -z "$USERNAME" -o -z "$PASSWORD" ]; then
+  echo "$TIMESTAMP: cant find username, password or hostname" >> $LOGFILE
+  exit 1
+fi
+
+if [ -e /usr/bin/curl ]; then
+  BIN="curl -fsS"
+elif [ -e /usr/bin/wget ]; then
+  BIN="wget -O- -q"
+else
+  echo "Neither curl nor wget found"
+  exit 1
+fi
+
+ADDRV6=$(ip -6 addr list scope global $DEVICE | grep -v " temporary" | sed -n 's/.*inet6 \([0-9a-f:]\+\).*/\1/p' | head -n 1)
+
+# test if IPv6 address could be found, if not exit with failure
+if [ -n "$ADDRV6" ]; then
+  if [ -e /usr/bin/subnetcalc ]; then
+    SNCALC=subnetcalc
+  else
+    echo "subnetcalc not found"
+    echo "  apt install subnetcalc"
+    exit 1
+  fi
+
+  # current address with netmask
+  CURRENT=$ADDRV6/$NETMASK
+  NETWORK=$($SNCALC $CURRENT -n -nocolor 2>/dev/null |grep Network |sed -n 's/.*= \([0-9a-f:]\+\).*/\1/p')/$NETMASK
+
+  # test if addr6file exist
+  if [ -e $ADDR6FILE ] ; then
+    OLD=$(cat $ADDR6FILE)
+  fi
+
+  # test if IPv6 address has changed, if not exit
+  if [ "$OLD" = "$NETWORK" ]; then
+    echo "$TIMESTAMP: IPv6 network unchanged (current=$NETWORK)" >> $LOGFILE    
+  else
+    # send addresses to do.de
+    $BIN --user $USERNAME:$PASSWORD https://ddns.do.de/?myip=$ADDRV6&ip6lanprefix=$NETWORK >> $LOGFILE
+    echo "" >> $LOGFILE
+    # save current address
+    echo $NETWORK > $ADDR6FILE
+    echo "$TIMESTAMP: update successful: $NETWORK" >> $LOGFILE
+  fi
+else
+  echo "$TIMESTAMP: no IPv6 address found" >> $LOGFILE
+fi
+
+ADDRV4=$($BIN -4 $IPV4ECHO)
+
+if [ -n "$ADDRV4" ]; then
+  # test if addr4file exist
+  if [ -e $ADDR4FILE ] ; then
+    OLD=$(cat $ADDR4FILE)
+  fi
+  # test if IPv6 address has changed, if not exit
+  if [ "$OLD" = "$ADDRV4" ]; then
+    echo "$TIMESTAMP: IPv4 address unchanged (current=$ADDRV4)" >> $LOGFILE    
+  else
+    # send addresses to do.de
+    $BIN --user $USERNAME:$PASSWORD https://ddns.do.de/?myip=$ADDRV4 >> $LOGFILE
+    echo "" >> $LOGFILE
+    # save current address
+    echo $ADDRV4 > $ADDR4FILE
+    echo "$TIMESTAMP: update successful: $ADDRV4" >> $LOGFILE
+  fi
+
+else
+  echo "$TIMESTAMP: no IPv4 address found" >> $LOGFILE
+fi
+
+#https://ddns.do.de/?myip=<ipaddr> https://ddns.do.de/?myip=<ip6addr>&ip6lanprefix=<ip6lanprefix>
+#curl --user DDNS-K58067-50711:cGvyei5rCDNKyENnnn https://ddns.do.de/?myip=87.157.249.234
