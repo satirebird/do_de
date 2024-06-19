@@ -30,10 +30,8 @@ fi
 
 if [ -e /usr/bin/curl ]; then
   BIN="curl -fsS"
-elif [ -e /usr/bin/wget ]; then
-  BIN="wget -O- -q"
 else
-  echo "Neither curl nor wget found"
+  echo "curl not found"
   exit 1
 fi
 
@@ -63,7 +61,7 @@ if [ -n "$ADDRV6" ]; then
     echo "$TIMESTAMP: IPv6 network unchanged (current=$NETWORK)" >> $LOGFILE    
   else
     # send addresses to do.de
-    $BIN --user $USERNAME:$PASSWORD https://ddns.do.de/?myip=$ADDRV6&ip6lanprefix=$NETWORK >> $LOGFILE
+    $BIN --user "$USERNAME:$PASSWORD" "https://ddns.do.de/?myip=$ADDRV6&ip6lanprefix=$NETWORK" >> $LOGFILE
     echo "" >> $LOGFILE
     # save current address
     echo $NETWORK > $ADDR6FILE
@@ -85,7 +83,7 @@ if [ -n "$ADDRV4" ]; then
     echo "$TIMESTAMP: IPv4 address unchanged (current=$ADDRV4)" >> $LOGFILE    
   else
     # send addresses to do.de
-    $BIN --user $USERNAME:$PASSWORD https://ddns.do.de/?myip=$ADDRV4 >> $LOGFILE
+    $BIN --user "$USERNAME:$PASSWORD" "https://ddns.do.de/?myip=$ADDRV4" >> $LOGFILE
     echo "" >> $LOGFILE
     # save current address
     echo $ADDRV4 > $ADDR4FILE
@@ -95,6 +93,3 @@ if [ -n "$ADDRV4" ]; then
 else
   echo "$TIMESTAMP: no IPv4 address found" >> $LOGFILE
 fi
-
-#https://ddns.do.de/?myip=<ipaddr> https://ddns.do.de/?myip=<ip6addr>&ip6lanprefix=<ip6lanprefix>
-#curl --user DDNS-K58067-50711:cGvyei5rCDNKyENnnn https://ddns.do.de/?myip=87.157.249.234
