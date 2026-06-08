@@ -1,8 +1,12 @@
 #!/bin/sh
 
 # test various files
-test -f /etc/default/do_de && . /etc/default/do_de
-test -f /etc/do_de/config && . /etc/do_de/config
+if [ -f $1 ]; then
+    . $1
+else
+    test -f /etc/default/do_de && . /etc/default/do_de
+    test -f /etc/do_de/config && . /etc/do_de/config
+fi
 
 # check if service is enabled, if not exit
 if [ "$ENABLED" = "0" ] ; then
