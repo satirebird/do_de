@@ -21,11 +21,6 @@ if ! [ -d $LOGDIR ] ; then
         mkdir -p $LOGDIR
 fi
 
-# test if tmp-folder exist, if not create it
-if ! [ -d $TMPDIR ] ; then
-        mkdir -p $TMPDIR
-fi
-
 # test if hostname or token is set, if not exit with failure
 if [ -z "$HOSTNAME" -o -z "$USERNAME" -o -z "$PASSWORD" ]; then
   echo "$TIMESTAMP: cant find username, password or hostname" >> $LOGFILE
@@ -55,20 +50,18 @@ if [ -n "$ADDRV6" ]; then
   CURRENT=$ADDRV6/$NETMASK
   NETWORK=$($SNCALC $CURRENT -n -nocolor 2>/dev/null |grep Network |sed -n 's/.*= \([0-9a-f:]\+\).*/\1/p')/$NETMASK
 
-  # test if addr6file exist
-  if [ -e $ADDR6FILE ] ; then
-    OLD=$(cat $ADDR6FILE)
-  fi
+  OLD=$(dig +short "$HOSTNAME" AAAA | grep -E '^[0-9]+:.*')/$NETMASK
+  OLD_NET=$($SNCALC $OLD -n -nocolor 2>/dev/null |grep Network |sed -n 's/.*= \([0-9a-f:]\+\).*/\1/p')/$NETMASK
+
+  echo "$OLD_NET vs $NETWORK"
 
   # test if IPv6 address has changed, if not exit
-  if [ "$OLD" = "$NETWORK" ]; then
+  if [ "$OLD_NET" = "$NETWORK" ]; then
     echo "$TIMESTAMP: IPv6 network unchanged (current=$NETWORK)" >> $LOGFILE    
   else
     # send addresses to do.de
     $BIN --user "$USERNAME:$PASSWORD" "https://ddns.do.de/?myip=$ADDRV6&ip6lanprefix=$NETWORK" >> $LOGFILE
     echo "" >> $LOGFILE
-    # save current address
-    echo $NETWORK > $ADDR6FILE
     echo "$TIMESTAMP: update successful: $NETWORK" >> $LOGFILE
   fi
 else
@@ -78,11 +71,8 @@ fi
 ADDRV4=$($BIN -4 $IPV4ECHO)
 
 if [ -n "$ADDRV4" ]; then
-  # test if addr4file exist
-  if [ -e $ADDR4FILE ] ; then
-    OLD=$(cat $ADDR4FILE)
-  fi
-  # test if IPv6 address has changed, if not exit
+  OLD=$(dig +short "$HOSTNAME" A | grep -E '^[0-9]+\..*')
+  # test if IPv4 address has changed, if not exit
   if [ "$OLD" = "$ADDRV4" ]; then
     echo "$TIMESTAMP: IPv4 address unchanged (current=$ADDRV4)" >> $LOGFILE    
   else
